@@ -1,1 +1,29 @@
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDLQxIpBkcbu0rvq+gLZAhq4kjixVa5nVana2FWkF9/uSzTybS7up4QRZBLlnnkBPjpMy16Ob+P7sYThwPuPyASez2G20kCFjHexN+dUK8v12uvH0dB6JH8Vt0mFhLv1dwUubVQPHAwhMtip/fHnh485LYyPA7SuI/xJSpEbCzlYZjQWYEjHCkpcMlGapsV9pUcEtAQEcBHv+EmJcu7sBDnWSA1BwFXT8ksfN31nu6GHwUuG38veVECbOyuHVlOYZ9QM1vl17CAKqfylfOldSt59woxdScv8EXo3WVzxKeZBV9p8pH2JJvTIwE09PYjyif7ht4rIuwC6+IYnM+Kk5MFLXP+c421V8uS3IcMDLHFjWR4jay5HTJROkoS7jFKMzVnd73VyoH9jxS94xnP3G7tFNgQMCYwQZFWeUzQHeAjIvSMn7Obm6QeSftr6ZGZ38UK4LjnT5e9jO8Z7+aDENYkJjgnpv6ODAuY+FQwY46zvESbQKsbHhEOLbGrZzmDA9/m1razYJ1nQmKCAcron77Del7XFLHy3Lw4R46H4BfLPfCZvIx7+Y3jIDrH780jtyvfVV+YQWI7ZwSVD8thXF5w6X7X7yzG+eu0vEWFDX8oraUori4oD0bD7VSo35bmmvlYyeZYeO2REK0SQm9qcKydh83k8JpSOEtbDj+vNy0hRQ== pub-to-pri
+#!/bin/bash
+
+# --- Private 서버 정보 ---
+PRIVATE_HOST="10.10.20.6"          # 실제 Private 서버 IP(본인걸로 바꿔야함)
+PRIVATE_USER="root"                 # Private 서버 계정(실제로는 root보다는 권한을 갖고 있는 다른 계정 사용 추천)
+PRIVATE_KEY="/root/.ssh/id_rsa"     # Public 서버에서 Private 서버 접속용 사설 키
+
+# --- 실행 후 로그 남기기(문제 있으면 해당 경로로 가서 로그 확인해보기) --- 
+exec > /root/app/deploy_private.log 2>&1
+echo "Starting deployment to Private server..."
+
+
+eval $(ssh-agent -s)
+ssh-add $PRIVATE_KEY
+
+
+ssh -o StrictHostKeyChecking=no $PRIVATE_USER@$PRIVATE_HOST "mkdir -p /root/app"
+
+
+scp -o StrictHostKeyChecking=no /root/app/build/libs/*.jar $PRIVATE_USER@$PRIVATE_HOST:/root/app/app.jar
+
+
+ssh -o StrictHostKeyChecking=no $PRIVATE_USER@$PRIVATE_HOST "nohup java -jar /root/app/app.jar > /root/app/app.log 2>&1 &"
+
+ssh -o StrictHostKeyChecking=no $PRIVATE_USER@$PRIVATE_HOST "bash </root/deploy.sh"
+
+ssh-agent -k
+
+echo "Deployment to Private server completed."
